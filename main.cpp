@@ -1,20 +1,28 @@
 #include <SFML/Graphics.hpp>
+#include <vector>
+#include <chrono>
+#include <thread>
 
 class Player
 {
 public:
-    Player(const std::string& texturePath, const sf::Vector2f& position, float scale, float movementSpeed)
-        : movementSpeed(movementSpeed), movingLeft(false), movingRight(false)
+    Player(const std::vector<std::string>& texturePaths, const sf::Vector2f& position, float scale, float movementSpeed)
+        : movementSpeed(movementSpeed), movingLeft(false), movingRight(false), currentTextureIndex(0), animationTimer()
     {
-        if (!texture.loadFromFile(texturePath))
+        for (const auto& texturePath : texturePaths)
         {
-            // Error handling if loading fails for the texture
-            throw std::runtime_error("Failed to load texture: " + texturePath);
+            sf::Texture texture;
+            if (!texture.loadFromFile(texturePath))
+            {
+              
+                throw std::runtime_error("Failed to load texture: " + texturePath);
+            }
+            textures.push_back(texture);
         }
 
-        sprite.setTexture(texture);
         sprite.setScale(scale, scale);
         sprite.setPosition(position);
+        sprite.setTexture(textures[currentTextureIndex]);
     }
 
     void move(float x, float y)
@@ -22,30 +30,76 @@ public:
         sprite.move(x, y);
     }
 
-    void handleMovement()
+    void setTextureLeft()
     {
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        currentTextureIndex = 0;  
+        sprite.setTexture(textures[currentTextureIndex]);
+    }
+
+    void setTextureRight()
+    {
+        currentTextureIndex = 1;  
+        sprite.setTexture(textures[currentTextureIndex]);
+    }
+
+    void animateRight()
+    {
+        currentTextureIndex++;
+        if (currentTextureIndex >= textures.size())
         {
-            move(-movementSpeed, 0);
+            currentTextureIndex = 2;  
+        }
+        sprite.setTexture(textures[currentTextureIndex]);
+        animationTimer.restart();
+    }
+
+    void draw(sf::RenderWindow& window)
+    {
+        window.draw(sprite);
+    }
+
+    void handleKeyPress(sf::Keyboard::Key key)
+    {
+        if (key == sf::Keyboard::Left)
+        {
             movingLeft = true;
             movingRight = false;
+            setTextureLeft();
         }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        else if (key == sf::Keyboard::Right)
         {
-            move(movementSpeed, 0);
             movingLeft = false;
             movingRight = true;
+            setTextureRight();
         }
-        else
+    }
+
+    void handleKeyRelease(sf::Keyboard::Key key)
+    {
+        if (key == sf::Keyboard::Left)
         {
             movingLeft = false;
+        }
+        else if (key == sf::Keyboard::Right)
+        {
             movingRight = false;
         }
     }
 
-    bool isMovingHorizontally() const
+    void update()
     {
-        return movingLeft || movingRight;
+        if (movingLeft)
+        {
+            sprite.move(-movementSpeed, 0);
+        }
+        else if (movingRight)
+        {
+            sprite.move(movementSpeed, 0);
+            if (animationTimer.getElapsedTime().asMilliseconds() >= 500)
+            {
+                animateRight();
+            }
+        }
     }
 
     bool isMovingLeft() const
@@ -58,18 +112,16 @@ public:
         return movingRight;
     }
 
-    void draw(sf::RenderWindow& window)
-    {
-        window.draw(sprite);
-    }
-
 private:
-    sf::Texture texture;
+    std::vector<sf::Texture> textures;
     sf::Sprite sprite;
     float movementSpeed;
     bool movingLeft;
     bool movingRight;
+    std::size_t currentTextureIndex;
+    sf::Clock animationTimer;
 };
+
 
 class Floor
 {
@@ -92,11 +144,11 @@ public:
     {
         if (isMovingLeft)
         {
-            sprite.move(-scrollSpeed * movementSpeed, 0);  // Move left with the same speed as the player
+            sprite.move(-scrollSpeed * movementSpeed, 0);  
         }
         else if (isMovingRight)
         {
-            sprite.move(scrollSpeed * movementSpeed, 0);  // Move right with the same speed as the player
+            sprite.move(scrollSpeed * movementSpeed, 0); 
         }
     }
 
@@ -117,8 +169,16 @@ int main()
 
     float playerMovementSpeed = 0.1f;
 
-    Player player("chasqui.png", sf::Vector2f(0, 530), 0.4f, playerMovementSpeed);
-    Floor floor("idk.psd", sf::Vector2f(0, 624), window.getSize().x / static_cast<float>(530), 0.2f);  // Add a scroll speed of 0.2f
+    std::vector<std::string> texturePaths = {
+        "chasqui-left.png",
+        "chasqui.png",
+        "rightmv1.png",
+        "rightmv2.png",
+        "rightmv3.png"
+    };
+
+    Player player(texturePaths, sf::Vector2f(0, 426), 0.4f, playerMovementSpeed);
+    Floor floor("idk.psd", sf::Vector2f(0, 624), window.getSize().x / static_cast<float>(530), 0.2f); 
 
     while (window.isOpen())
     {
@@ -129,14 +189,23 @@ int main()
             {
                 window.close();
             }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                player.handleKeyPress(event.key.code);
+            }
+            else if (event.type == sf::Event::KeyReleased)
+            {
+                player.handleKeyRelease(event.key.code);
+            }
         }
 
-        player.handleMovement();
-
         window.clear(sf::Color(135, 206, 235));
+
+        player.update();  
+
         player.draw(window);
 
-        if (player.isMovingHorizontally())
+        if (player.isMovingLeft() || player.isMovingRight())
         {
             floor.update(playerMovementSpeed, player.isMovingLeft(), player.isMovingRight());
         }
