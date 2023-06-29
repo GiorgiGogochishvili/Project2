@@ -12,7 +12,7 @@ protected:
     std::vector<std::string>& texturePaths;
     std::vector<sf::Texture> textures;
     sf::Vector2f position;
-    float scale;  
+    float scale;
     sf::Sprite sprite;
     std::size_t currentTextureIndex;
     sf::Clock animationTimer;
@@ -21,7 +21,7 @@ protected:
     sf::Clock idleTimer;
 
 public:
-    Person(std::vector<std::string>& texturePaths, const sf::Vector2f& position, float scale,size_t TextureIndex)
+    Person(std::vector<std::string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
         : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), currentTextureIndex(0),
         idleTextureIndex(0)
     {
@@ -65,13 +65,13 @@ public:
         return sprite.getPosition();
     }
 
-     void draw(sf::RenderWindow& window)
-     {
-         window.draw(sprite);
-     }
+    void draw(sf::RenderWindow& window)
+    {
+        window.draw(sprite);
+    }
 
     /*void IdleAnimatePerson()
-    { 
+    {
             if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
             {
                 if (currentTextureIndex == idleTextureIndex ) {
@@ -283,7 +283,89 @@ private:
 };
 
 
+class Scroll
+{
+private:
+    vector<sf::Texture> textures;
+    sf::Sprite sprite;
+    sf::Clock spawnTimer;
+    sf::Clock despawnTimer;
+    bool spawned;
+    float timespawned;
+    
 
+public:
+    bool gameStarted = false;
+
+    Scroll(const vector<string>& scrollTexturePaths)
+    {
+        for (const auto& texturePath : scrollTexturePaths)
+        {
+            sf::Texture texture;
+            if (!texture.loadFromFile(texturePath))
+            {
+                throw runtime_error("Failed to load texture: " + texturePath);
+            }
+            textures.push_back(texture);
+        }
+
+        sprite.setTexture(textures[0]);
+        sprite.setScale(1.5f, 1.5f);
+        sprite.setPosition(-600, 506);
+    }
+
+   
+
+    
+
+    void spawnFirstScroll()
+    {
+        sprite.setTexture(textures[0]);
+        sprite.setPosition(500, 56);
+        spawned = true;
+        spawnTimer.restart();
+    }
+
+    void spawnSecondScroll()
+    {
+        sprite.setTexture(textures[1]);
+        sprite.setPosition(1500, 506);
+        spawned = true;
+    }
+
+    void despawnScroll()
+    {
+        spawned = false;
+        sprite.setPosition(-600, 506);
+    }
+
+    void update(const Player& player)
+    {
+        if (!spawned && spawnTimer.getElapsedTime().asSeconds() >= 3.0f )
+        {
+            timespawned = spawnTimer.getElapsedTime().asSeconds();
+            spawnFirstScroll();
+            
+        }
+
+        if (player.getPosition().x >= 1500 )
+        {
+            spawnSecondScroll();
+            
+        }
+
+        if (spawned && despawnTimer.getElapsedTime().asSeconds() >= timespawned + 6.0f)
+        {
+            despawnScroll();
+            gameStarted = true;
+        }
+    }
+
+    void draw(sf::RenderWindow& window)
+    {
+        window.draw(sprite);
+    }
+};
 
 int main()
 {
@@ -307,12 +389,18 @@ int main()
         "general.png"
     };
 
+    vector<string> scrollTexturePaths = {
+        "generaltext.png",
+        "text1.psd"
+    };
+    Scroll firstScroll(scrollTexturePaths);
+    Scroll secondScroll(scrollTexturePaths);
     Player player(texturePaths, sf::Vector2f(200, 626), 0.4f, playerMovementSpeed);
     Person General(texturePaths, sf::Vector2f(0, 506), 0.4f, 9);
     sf::Texture backgroundTexture;
     if (!backgroundTexture.loadFromFile("background.psd"))
     {
-        // Error handling if loading fails for the background texture
+        
         throw std::runtime_error("Failed to load texture: background.psd");
     }
     sf::Sprite backgroundSprite;
@@ -333,6 +421,7 @@ int main()
     while (window.isOpen())
     {
         sf::Event event;
+      
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
@@ -341,24 +430,31 @@ int main()
             }
             else if (event.type == sf::Event::KeyPressed)
             {
-                player.handleKeyPress(event.key.code);
+                if (firstScroll.gameStarted == true) {
+                    player.handleKeyPress(event.key.code);
+                }
             }
             else if (event.type == sf::Event::KeyReleased)
             {
-                player.handleKeyRelease(event.key.code);
+                if (firstScroll.gameStarted == true) {
+                 player.handleKeyRelease(event.key.code);
+                }
             }
         }
+       
 
         window.clear(sf::Color(135, 206, 235));
 
         player.update(secondBackgroundSprite);  // Update player animation and position
-
+        firstScroll.update(player);
+        secondScroll.update(player);
         view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
         window.setView(view);
-
+        
         window.draw(backgroundSprite);
         window.draw(secondBackgroundSprite);
-
+        firstScroll.draw(window);
+        secondScroll.draw(window);
         General.draw(window);
         King.draw(window);
         player.draw(window);
