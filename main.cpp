@@ -3,33 +3,39 @@
 #include <vector>
 #include <chrono>
 #include <thread>
- 
+
 #ifdef _WIN32
 #include <Windows.h>
 #endif
 using namespace std;
- 
-class Person
-{
- 
-protected:
-    vector<string>& texturePaths;
-    vector<sf::Texture> textures;
-    sf::Vector2f position;
-    float scale;
-    size_t currentTextureIndex;
-    sf::Clock animationTimer;
-    size_t idleTextureIndex;
-    size_t TextureIndex;
-    sf::Clock idleTimer;
- 
+// libraries and namespaces 
+
+class visualize // abstract class vizualize
+{  
 public:
     sf::Sprite sprite;
+    virtual void draw(sf::RenderWindow& window) = 0; 
+    virtual sf::Vector2f getPosition() const = 0; 
+};
+class Person : visualize // derived class Person that inherits from the visualize
+{
+protected:
+    vector<string>& texturePaths;  // Vector of textures we load
+    vector<sf::Texture> textures;  // Vector of loaded textures
+    sf::Vector2f position;         // Position of the person
+    float scale;                   // Scale of the person
+    size_t currentTextureIndex;    // Index of the current texture being displayed
+    size_t TextureIndex;           // Index of the default texture
+
+public:
+    sf::Sprite sprite;  // Sprite object for the person
+
+    
     Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
-        : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), currentTextureIndex(0),
-        idleTextureIndex(0)
+        : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex),
+        currentTextureIndex(0)
     {
- 
+        // Load textures from the provided paths
         for (const auto& texturePath : texturePaths)
         {
             sf::Texture texture;
@@ -40,73 +46,83 @@ public:
             }
             textures.push_back(texture);
         }
- 
+
+        // Check if texturePaths vector is empty
         if (texturePaths.empty())
         {
             throw runtime_error("Texture paths vector is empty");
         }
- 
+
+        // Check if currentTextureIndex is out of range
         if (texturePaths.size() <= currentTextureIndex)
         {
             throw runtime_error("Invalid current texture index");
         }
- 
-        sf::Texture texture;
-        if (!texture.loadFromFile(texturePaths[currentTextureIndex]))
-        {
-            throw runtime_error("Failed to load texture: " + texturePaths[currentTextureIndex]);
-        }
- 
-        // currentTextureIndex = idleTextureIndex;
+
+        // Set the texture and properties for the sprite
         sprite.setTexture(textures[TextureIndex]);
         sprite.setScale(scale, scale);
         sprite.setPosition(position);
     }
- 
- 
-    sf::Vector2f getPosition() const
-    {
-        return sprite.getPosition();
-    }
- 
-    void draw(sf::RenderWindow& window)
+
+    // Function to draw the sprite 
+    void draw(sf::RenderWindow& window) override
     {
         window.draw(sprite);
     }
- 
-    /*void IdleAnimatePerson()
+
+    // Function to return the position of the sprite
+    sf::Vector2f getPosition() const override
     {
-            if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
+        return sprite.getPosition();
+    }
+
+    /*
+  
+    void IdleAnimatePerson()
+    {
+        
+        if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
+        {
+            
+            if (currentTextureIndex == idleTextureIndex)
             {
-                if (currentTextureIndex == idleTextureIndex ) {
-                    currentTextureIndex = TextureIndex;
-                }
-                else {
-                    currentTextureIndex = idleTextureIndex;
-                }
-                sprite.setTexture(textures[currentTextureIndex]);
-                idleTimer.restart();
+                currentTextureIndex = TextureIndex;
             }
-    }*/
+            else
+            {
+                currentTextureIndex = idleTextureIndex;
+            }
+
+           
+            sprite.setTexture(textures[currentTextureIndex]);
+            idleTimer.restart();
+        }
+    }
+    DIDNT REALISE IDLE ANIMATION FOR PERSON//lack of textures for idle animation
+    */
 };
-class Enemy : public Person
+
+class Enemy : public Person // derived class Enemy that inherits from the Person
 {
 public:
     Enemy(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
         : Person(texturePaths, position, scale, TextureIndex)
     {
-       
+
     }
- 
-   
+
+
 };
- 
-class Player
+
+class Player : visualize // Derived class Player that inherits from visualize, main class of the game, has everything according to the player and his objects
 {
 public:
-    Player(const vector<string>& texturePaths, const sf::Vector2f& position, float scale, float movementSpeed, sf::RenderWindow& window,Enemy& enemy,Enemy& enemy2,Enemy& enemy3)
-        : movementSpeed(movementSpeed), movingLeft(false), movingRight(false), currentTextureIndex(0), animationTimer(), idleTimer(),window(window),enemy(enemy),enemy2(enemy2),enemy3(enemy3)
+   
+    Player(const vector<string>& texturePaths, const sf::Vector2f& position, float scale, float movementSpeed, sf::RenderWindow& window, Enemy& enemy, Enemy& enemy2, Enemy& enemy3)
+        : movementSpeed(movementSpeed), movingLeft(false), movingRight(false), currentTextureIndex(0), animationTimer(), idleTimer(), window(window), enemy(enemy), enemy2(enemy2), enemy3(enemy3)
     {
+        // Load textures from the provided texture paths
         for (const auto& texturePath : texturePaths)
         {
             sf::Texture texture;
@@ -117,82 +133,80 @@ public:
             }
             textures.push_back(texture);
         }
- 
+
         sprite.setScale(scale, scale);
         sprite.setPosition(position);
         sprite.setTexture(textures[currentTextureIndex]);
- 
-        
+
+        // Set the texture indexes for idle animations
         idleRightTextureIndex = 5;
         idleLeftTextureIndex = 6;
         idleIndex = 0;
         sprite.setTexture(textures[0]);
         idleTimer.restart();
- 
+
+        // Load gold texture
         if (!goldTexture.loadFromFile("gold.png"))
         {
             throw runtime_error("Failed to load texture: gold.png");
         }
-        
         goldSprite.setTexture(goldTexture);
         goldSprite.setScale(0.2f, 0.2f);
-        
- 
-       
+
+        // Load meat texture
         if (!meatTexture.loadFromFile("meat.png"))
         {
             throw runtime_error("Failed to load texture: meat.png");
         }
-       
         meatSprite.setTexture(meatTexture);
         meatSprite.setScale(0.2f, 0.2f);
- 
+
+        // Load weapon texture
         if (!weaponTexture.loadFromFile("weapon.png"))
         {
             throw runtime_error("Failed to load texture: weapon.psd");
         }
- 
         weaponSprite.setTexture(weaponTexture);
         weaponSprite.setScale(0.2f, 0.2f);
- 
+
+        // Load scroll1 texture
         if (!scroll1Texture.loadFromFile("scroll1.psd"))
         {
             throw runtime_error("Failed to load texture: scroll1.psd");
         }
- 
         scroll1Sprite.setTexture(scroll1Texture);
         scroll1Sprite.setScale(0.2f, 0.5f);
- 
+
+        // Load scroll2 texture
         if (!scroll2Texture.loadFromFile("scroll2.psd"))
         {
             throw runtime_error("Failed to load texture: scroll2.psd");
         }
- 
         scroll2Sprite.setTexture(scroll2Texture);
         scroll2Sprite.setScale(0.2f, 0.5f);
- 
- 
- 
-        
     }
- 
+
+    // Move the player
     void move(float x, float y)
     {
         sprite.move(x, y);
     }
- 
+
+    // Set the texture for left movement
     void setTextureLeft()
     {
-        currentTextureIndex = 0;  // Set the texture index for left movement
+        currentTextureIndex = 0;
         sprite.setTexture(textures[currentTextureIndex]);
     }
- 
+
+    // Set the texture for right movement
     void setTextureRight()
     {
-        currentTextureIndex = 1;  // Set the texture index for right movement
+        currentTextureIndex = 1;
         sprite.setTexture(textures[currentTextureIndex]);
     }
- 
+
+    // Animate right
     void animateRight()
     {
         currentTextureIndex++;
@@ -203,27 +217,30 @@ public:
         sprite.setTexture(textures[currentTextureIndex]);
         animationTimer.restart();
     }
- 
-    void draw(sf::RenderWindow& window)
+
+    // Drawing the player and objects
+    void draw(sf::RenderWindow& window) override
     {
         window.draw(sprite);
- 
+
+        // Drawing quest objects
         if (quest1Spawned == true)
         {
             window.draw(goldSprite);
             window.draw(meatSprite);
         }
-        if (quest2Spawned == true) {
+        if (quest2Spawned == true)
+        {
             window.draw(weaponSprite);
         }
-        if (quest3Spawned == true) {
+        if (quest3Spawned == true)
+        {
             window.draw(scroll1Sprite);
             window.draw(scroll2Sprite);
         }
- 
-        
     }
- 
+
+    // Events on the key press
     void handleKeyPress(sf::Keyboard::Key key)
     {
         if (key == sf::Keyboard::Left)
@@ -238,13 +255,13 @@ public:
             movingRight = true;
             setTextureRight();
         }
-        else if
-            (key == sf::Keyboard::Enter) {
-            checkChoice(enemy,enemy2,enemy3);
+        else if (key == sf::Keyboard::Enter)
+        {
+            checkChoice(enemy, enemy2, enemy3);
         }
-        
     }
- 
+
+    // Events on key  release
     void handleKeyRelease(sf::Keyboard::Key key)
     {
         if (key == sf::Keyboard::Left)
@@ -252,7 +269,8 @@ public:
             movingLeft = false;
             lookingLeft = true;
             lookingRight = false;
-            if (!movingRight) {
+            if (!movingRight)
+            {
                 idleIndex = 2;
                 sprite.setTexture(textures[idleLeftTextureIndex]);
                 idleTimer.restart();
@@ -263,150 +281,163 @@ public:
             movingRight = false;
             lookingRight = true;
             lookingLeft = false;
-            if (!movingLeft) {
+            if (!movingLeft)
+            {
                 idleIndex = 1;
                 sprite.setTexture(textures[idleRightTextureIndex]);
                 idleTimer.restart();
             }
         }
-        
     }
- 
+
+    // Spawn the gold
     void spawnGold()
     {
-        goldSprite.setPosition(getPosition().x + 220,getPosition().y+50 );
+        goldSprite.setPosition(getPosition().x + 220, getPosition().y + 50);
         quest1Spawned = true;
     }
- 
+
+    // Spawn the meat
     void spawnMeat()
     {
-        meatSprite.setPosition(getPosition().x - 120, getPosition().y+50 );
-        
+        meatSprite.setPosition(getPosition().x - 120, getPosition().y + 50);
     }
- 
+
+    // Spawn the weapon
     void spawnWeapon()
     {
         weaponSprite.setPosition(getPosition().x - 120, getPosition().y + 50);
         quest2Spawned = true;
     }
- 
+
+    // Spawn scrolls
     void spawnScrolls()
     {
         scroll1Sprite.setPosition(getPosition().x - 200, getPosition().y);
         scroll2Sprite.setPosition(getPosition().x + 180, getPosition().y);
         quest3Spawned = true;
- 
     }
- 
- 
+
+    // Check the player's choice during the quest
     void checkChoice(Enemy& enemy, Enemy& enemy2, Enemy& enemy3)
     {
-       if(quest1done==false){
-        if (lookingLeft==true && canMove==false)
+        if (quest1done == false)
         {
-            canMove = true;
-            quest1done = true;
-            goldSprite.setPosition(-600, 0);
-            meatSprite.setPosition(enemy.getPosition().x - 70, enemy.getPosition().y + 50);
- 
+            if (lookingLeft == true && canMove == false)
+            {
+                canMove = true;
+                quest1done = true;
+                goldSprite.setPosition(-600, 0);
+                meatSprite.setPosition(enemy.getPosition().x - 70, enemy.getPosition().y + 50);
+            }
+
+            if (lookingRight == true && canMove == false)
+            {
+                window.close();
+            }
         }
- 
-        if (lookingRight == true && canMove == false)
+        else if (quest2done == false)
         {
-            window.close();
+            if (lookingRight == true && canMove == false)
+            {
+                canMove = true;
+                quest2done = true;
+                weaponSprite.setPosition(-600, 0);
+                goldSprite.setPosition(enemy2.getPosition().x + 15, enemy2.getPosition().y + 110);
+            }
+
+            if (lookingLeft == true && canMove == false)
+            {
+                window.close();
+            }
         }
-       }
-       else if (quest2done == false) {
-           if (lookingRight==true && canMove == false)
-           {
-               canMove = true;
-               quest2done = true;
-               weaponSprite.setPosition(-600, 0);
-               goldSprite.setPosition(enemy2.getPosition().x + 15, enemy2.getPosition().y + 110);
- 
-           }
- 
-           if (lookingLeft == true && canMove == false)
-           {
-               window.close();
-           }
-       }
-       else if (quest3done == false) {
-           if (lookingLeft == true && canMove == false)
-           {
-               canMove = true;
-               quest3done = true;
-               scroll1Sprite.setPosition(-600, 0);
-               scroll2Sprite.setPosition(-600, 0);
- 
-           }
- 
-           if (lookingRight == true && canMove == false)
-           {
-               window.close();
-           }
-       }
+        else if (quest3done == false)
+        {
+            if (lookingLeft == true && canMove == false)
+            {
+                canMove = true;
+                quest3done = true;
+                scroll1Sprite.setPosition(-600, 0);
+                scroll2Sprite.setPosition(-600, 0);
+            }
+
+            if (lookingRight == true && canMove == false)
+            {
+                window.close();
+            }
+        }
     }
-    
-    void update(const sf::Sprite& secondBackgroundSprite, const Enemy& enemy, const Enemy& enemy2, const Enemy& enemy3) {
- 
-        if (canMove && getDistance(getPosition(), enemy.getPosition()) <= 300 && quest1done == false) {
+
+    // Update function
+    void update(const sf::Sprite& secondBackgroundSprite, const Enemy& enemy, const Enemy& enemy2, const Enemy& enemy3)
+    {
+        // quest 1
+        if (canMove && getDistance(getPosition(), enemy.getPosition()) <= 300 && quest1done == false)
+        {
             canMove = false;
             spawnGold();
             spawnMeat();
-    
         }
- 
-        if (canMove && getDistance(getPosition(), enemy2.getPosition()) <= 300 && quest2done == false) {
+
+        // quest 2
+        if (canMove && getDistance(getPosition(), enemy2.getPosition()) <= 300 && quest2done == false)
+        {
             canMove = false;
             spawnGold();
             spawnWeapon();
- 
         }
- 
-        if (canMove && getDistance(getPosition(), enemy3.getPosition()) <= 400 && quest3done == false) {
+
+        // quest 3
+        if (canMove && getDistance(getPosition(), enemy3.getPosition()) <= 400 && quest3done == false)
+        {
             canMove = false;
             spawnScrolls();
-            
- 
         }
- 
-        if (canMove && sprite.getPosition().x>8860) {
+
+        // Stop movement at the end of the world
+        if (canMove && sprite.getPosition().x > 8860)
+        {
             canMove = false;
-           
         }
- 
-        if (canMove) {
-            if (movingLeft) {
-                if (sprite.getPosition().x > 200) {
+
+        // Move the player
+        if (canMove)
+        {
+            if (movingLeft)
+            {
+                if (sprite.getPosition().x > 200)
+                {
                     sprite.move(-movementSpeed, 0);
                 }
             }
-            else if (movingRight) {
-               // if (sprite.getPosition().x + sprite.getGlobalBounds().width < secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 920) {
-                    sprite.move(movementSpeed, 0);
-                    if (animationTimer.getElapsedTime().asMilliseconds() >= 500) {
-                        animateRight();
-                    }
-                //}
+            else if (movingRight)
+            {
+                sprite.move(movementSpeed, 0);
+                if (animationTimer.getElapsedTime().asMilliseconds() >= 500)
+                {
+                    animateRight();
+                }
             }
-            else {
+            else
+            {
                 IdleAnimate();
             }
         }
     }
- 
- 
+
+    // Animate idle
     void IdleAnimate()
     {
         if (idleIndex == 1)
         {
             if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
             {
-                if (idleRightTextureIndex == 5) {
+                if (idleRightTextureIndex == 5)
+                {
                     idleRightTextureIndex = 1;
                 }
-                else {
+                else
+                {
                     idleRightTextureIndex = 5;
                 }
                 sprite.setTexture(textures[idleRightTextureIndex]);
@@ -417,10 +448,12 @@ public:
         {
             if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
             {
-                if (idleLeftTextureIndex == 6) {
+                if (idleLeftTextureIndex == 6)
+                {
                     idleLeftTextureIndex = 0;
                 }
-                else {
+                else
+                {
                     idleLeftTextureIndex = 6;
                 }
                 sprite.setTexture(textures[idleLeftTextureIndex]);
@@ -428,346 +461,349 @@ public:
             }
         }
     }
- 
- 
+
+    // Check if the player is moving left
     bool isMovingLeft() const
     {
         return movingLeft;
     }
- 
+
+    // Check if the player is moving right
     bool isMovingRight() const
     {
         return movingRight;
     }
- 
-    sf::Vector2f getPosition() const
+
+    //Current position of the player
+    sf::Vector2f getPosition() const override
     {
         return sprite.getPosition();
     }
- 
+
+    // Main variables
     bool quest1done = false;
     bool quest2done = false;
     bool quest3done = false;
-private:
-    bool canMove = true;
-    vector<sf::Texture> textures;
-    sf::Sprite sprite;
-    float movementSpeed = 0.0f;
-    bool movingLeft = false;
-    bool movingRight = false;
-    size_t currentTextureIndex;
-    sf::Clock animationTimer;
-    size_t idleRightTextureIndex;
-    size_t idleLeftTextureIndex;
-    sf::Clock idleTimer;
-    int idleIndex;
-    
-    sf::Texture goldTexture;
-    sf::Texture meatTexture;
-    sf::Sprite meatSprite;
-    sf::Sprite goldSprite;
-    sf::Texture weaponTexture;
-    sf::Texture scroll1Texture;
-    sf::Texture scroll2Texture;
-    sf::Sprite weaponSprite;
-    sf::Sprite scroll1Sprite;
-    sf::Sprite scroll2Sprite;
     bool quest1Spawned = false;
     bool quest2Spawned = false;
     bool quest3Spawned = false;
-    bool lookingRight=false;
-    bool lookingLeft=true;
-    sf::RenderWindow& window;
-    Enemy enemy;
-    Enemy enemy2;
-    Enemy enemy3;
- 
- 
-    float getDistance(const sf::Vector2f& pos1, const sf::Vector2f& pos2) const {
-        float dx = pos2.x - pos1.x;
-        float dy = pos2.y - pos1.y;
-        return sqrt(dx * dx + dy * dy);
-    }
- 
-};
- 
- 
-class Scroll
-{
+    bool canMove = true;
+    bool lookingLeft = false;
+    bool lookingRight = false;
+
 private:
+    //Nain variables
+    float movementSpeed;
+    bool movingLeft;
+    bool movingRight;
+    int currentTextureIndex;
     vector<sf::Texture> textures;
     sf::Sprite sprite;
-    sf::Clock spawnTimer;
-    sf::Clock despawnTimer;
-    bool spawned;
-    float counttime;
-    float timespawned;
-    bool textSpawned = false;
-    sf::Text text;
-    bool quest1done;
-    bool restarted = false;
-    sf::Clock fourthscrolltimer;
+    sf::Clock animationTimer;
+    sf::Clock idleTimer;
+    int idleRightTextureIndex;
+    int idleLeftTextureIndex;
+    int idleIndex;
+    sf::RenderWindow& window;
+    Enemy& enemy;
+    Enemy& enemy2;
+    Enemy& enemy3;
+
+    // Textures for quest objects
+    sf::Texture goldTexture;
+    sf::Texture meatTexture;
+    sf::Texture weaponTexture;
+    sf::Texture scroll1Texture;
+    sf::Texture scroll2Texture;
+
+    // Sprites for quest objects
+    sf::Sprite goldSprite;
+    sf::Sprite meatSprite;
+    sf::Sprite weaponSprite;
+    sf::Sprite scroll1Sprite;
+    sf::Sprite scroll2Sprite;
+    //get distance
     float getDistance(const sf::Vector2f& pos1, const sf::Vector2f& pos2) const {
         float dx = pos2.x - pos1.x;
         float dy = pos2.y - pos1.y;
         return sqrt(dx * dx + dy * dy);
     }
-    sf::Vector2f getPosition() const
-    {
-        return sprite.getPosition();
-    }
-    float fadeInDuration = 2.0f;
-    float fadeAlpha = 0.0f;
- 
- 
-public:
-    bool gameStarted = false;
-    bool fadeIn = false;
- 
-    Scroll(const vector<string>& scrollTexturePaths) 
-    {
-        for (const auto& texturePath : scrollTexturePaths)
-        {
-            sf::Texture texture;
-            if (!texture.loadFromFile(texturePath))
-            {
-                throw runtime_error("Failed to load texture: " + texturePath);
-            }
-            textures.push_back(texture);
-        }
- 
-        
- 
-        
-        
-        sprite.setPosition(-600, 506);
-    }
- 
-   
- 
-    
- 
-    void spawnFirstScroll()
-    {
-        sprite.setScale(1.7f, 1.7f);
-        sprite.setTexture(textures[0]);
-        sprite.setPosition(500, 56);
-        
-        spawnTimer.restart();
-    }
- 
-    void spawnSecondScroll()
-    {
-        sprite.setScale(2.5f, 2.5f);
-        sprite.setTexture(textures[1]);
-        sprite.setPosition(1800, 186);
-        
-        spawnTimer.restart();
-    }
-    void spawnThirdScroll()
-    {
-        sprite.setScale(0.6f, 0.6f);
-        sprite.setTexture(textures[2]);
-        sprite.setPosition(4100, 26);
-        
-        spawnTimer.restart();
-    }
-    void spawnFourthScroll()
-    {
-        sprite.setScale(0.6f, 0.6f);
-        sprite.setTexture(textures[3]);
-        sprite.setPosition(6700, 26);
-        
-        spawnTimer.restart();
-    }
- 
-    void spawnFifthScroll()
-    {
-        sprite.setScale(0.6f, 0.6f);
-        sprite.setTexture(textures[5]);
-        sprite.setPosition(8700, 26);
- 
-        spawnTimer.restart();
-    }
- 
-    void spawnSixthScroll()
-    {
-        sprite.setScale(0.6f, 0.6f);
-        sprite.setTexture(textures[6]);
-        sprite.setPosition(9000, 26);
- 
-        spawnTimer.restart();
-    }
- 
-    void despawnScroll()
-    {
-        spawned = true;
-        sprite.setPosition(-600, 506);
-    }
- 
-    void updatefirstscroll(const Player& player)
-    {
-        if (!spawned && spawnTimer.getElapsedTime().asSeconds() >= 3.0f)
-        {
-            timespawned = spawnTimer.getElapsedTime().asSeconds();
-            spawnFirstScroll();
-        }
-        if (despawnTimer.getElapsedTime().asSeconds() >= timespawned + 6.0f)
-        {
-            despawnScroll();
-            gameStarted = true;
-        }
-       
-    }
-    void updatesecondscroll(const Player& player)
-    {
-        
-        if (!spawned) {
-            if (player.getPosition().x >= 1480 && player.getPosition().x <= 1520)
-            {
-                spawnSecondScroll();
- 
- 
-            }
- 
-            if (player.quest1done == true)
-            {
- 
-                despawnScroll();
- 
-            }
-        }
-    }
- 
-    void updatethirdscroll(const Player& player)
-    {
- 
-        if (!spawned) {
-            if (player.getPosition().x >= 3980 && player.getPosition().x <= 4020)
-            {
-                spawnThirdScroll();
- 
- 
-            }
- 
-            if (player.quest2done == true)
-            {
-                despawnScroll();
- 
-            }
-        }
-    }
- 
-    void updatefourthscroll(const Player& player, Enemy& enemy)
-    {
-        if(!spawned){
- 
-            if (player.getPosition().x >= 6580 && player.getPosition().x <= 6620)
-            {
-                spawnFourthScroll();
- 
- 
-            }
- 
-            if (player.quest3done == true)
-            {
-                if (!spawned)
-                {
-                    sprite.setTexture(textures[4]);
- 
-                    
-                    if(!restarted){
-                     fourthscrolltimer.restart();
-                     restarted = true;
-                    }
-                    
-                    if(fourthscrolltimer.getElapsedTime().asSeconds()>=3.0f)
-                        despawnScroll();
- 
-                    enemy.sprite.setPosition(-600, 0);
-                    
-                }
- 
-            }
-        }
-    }
-    
-    void updatefifthscroll(const Player& player)
-    {
-        if (!spawned) {
- 
-            if (player.getPosition().x >= 8850 && player.getPosition().x <= 8870)
-            {
- 
-               
- 
-                spawnFifthScroll();
- 
-                if (!restarted) {
-                    fourthscrolltimer.restart();
-                    restarted = true;
-                }
- 
-                if (fourthscrolltimer.getElapsedTime().asSeconds() >= 5.0f) {
-                    spawnSixthScroll();
-                    
-                }
-                if (fourthscrolltimer.getElapsedTime().asSeconds() >= 10.0f)
-                fadeIn = true;
-            }
-        }
-    }
- 
- 
- 
- 
- 
-    void draw(sf::RenderWindow& window)
-    {
-        window.draw(sprite);
-        
-    }
 };
- 
-int main()
-{
- 
-    
-    sf::RenderWindow window(sf::VideoMode(1280, 720), "Ink adventure");
-    sf::RectangleShape fadeRect(sf::Vector2f(window.getSize().x, window.getSize().y));
-    
+
+
+
+    class Scroll : visualize
+    {
+    private:
+        // Main variables
+        vector<sf::Texture> textures;
+        sf::Sprite sprite;
+        sf::Clock spawnTimer;
+        sf::Clock despawnTimer;
+        bool spawned;
+        float counttime;
+        float timespawned;
+        bool textSpawned = false;
+        sf::Text text;
+        bool quest1done;
+        bool restarted = false;
+        sf::Clock fourthscrolltimer;
+        // Get the position of the scroll
+        sf::Vector2f getPosition() const override
+        {
+            return sprite.getPosition();
+        }
+        float fadeInDuration = 2.0f;
+        float fadeAlpha = 0.0f;
+
+
+    public:
+        bool gameStarted = false;
+        bool fadeIn = false;
+
+        Scroll(const vector<string>& scrollTexturePaths)
+        {
+            for (const auto& texturePath : scrollTexturePaths)
+            {
+                sf::Texture texture;
+                if (!texture.loadFromFile(texturePath))
+                {
+                    throw runtime_error("Failed to load texture: " + texturePath);
+                }
+                textures.push_back(texture);
+            }
+
+
+
+
+
+            sprite.setPosition(-600, 506);
+        }
+
+
+
+
+        // Spawn the first scroll
+        void spawnFirstScroll()
+        {
+            sprite.setScale(1.7f, 1.7f);
+            sprite.setTexture(textures[0]);
+            sprite.setPosition(500, 56);
+
+            spawnTimer.restart();
+        }
+        // Spawn the second scroll
+        void spawnSecondScroll()
+        {
+            sprite.setScale(2.5f, 2.5f);
+            sprite.setTexture(textures[1]);
+            sprite.setPosition(1800, 186);
+
+            spawnTimer.restart();
+        }
+        // etc...
+        void spawnThirdScroll()
+        {
+            sprite.setScale(0.6f, 0.6f);
+            sprite.setTexture(textures[2]);
+            sprite.setPosition(4100, 26);
+
+            spawnTimer.restart();
+        }
+        void spawnFourthScroll()
+        {
+            sprite.setScale(0.6f, 0.6f);
+            sprite.setTexture(textures[3]);
+            sprite.setPosition(6700, 26);
+
+            spawnTimer.restart();
+        }
+
+        void spawnFifthScroll()
+        {
+            sprite.setScale(0.6f, 0.6f);
+            sprite.setTexture(textures[5]);
+            sprite.setPosition(8700, 26);
+
+            spawnTimer.restart();
+        }
+
+        void spawnSixthScroll()
+        {
+            sprite.setScale(0.6f, 0.6f);
+            sprite.setTexture(textures[6]);
+            sprite.setPosition(9000, 26);
+
+            spawnTimer.restart();
+        }
+        // Scroll despawn function
+        void despawnScroll()
+        {
+            spawned = true;
+            sprite.setPosition(-600, 506);
+        }
+
+        // Update functions for all scrolls
+        void updatefirstscroll(const Player& player)
+        {
+            if (!spawned && spawnTimer.getElapsedTime().asSeconds() >= 3.0f)
+            {
+                timespawned = spawnTimer.getElapsedTime().asSeconds();
+                spawnFirstScroll();
+            }
+            if (despawnTimer.getElapsedTime().asSeconds() >= timespawned + 6.0f)
+            {
+                despawnScroll();
+                gameStarted = true;
+            }
+
+        }
+        void updatesecondscroll(const Player& player)
+        {
+
+            if (!spawned) {
+                if (player.getPosition().x >= 1480 && player.getPosition().x <= 1520)
+                {
+                    spawnSecondScroll();
+
+
+                }
+
+                if (player.quest1done == true)
+                {
+
+                    despawnScroll();
+
+                }
+            }
+        }
+
+        void updatethirdscroll(const Player& player)
+        {
+
+            if (!spawned) {
+                if (player.getPosition().x >= 3980 && player.getPosition().x <= 4020)
+                {
+                    spawnThirdScroll();
+
+
+                }
+
+                if (player.quest2done == true)
+                {
+                    despawnScroll();
+
+                }
+            }
+        }
+
+        void updatefourthscroll(const Player& player, Enemy& enemy)
+        {
+            if (!spawned) {
+
+                if (player.getPosition().x >= 6580 && player.getPosition().x <= 6620)
+                {
+                    spawnFourthScroll();
+
+
+                }
+                // a bit different here,enemy should dissapear too,and another scroll should spawn
+                if (player.quest3done == true)
+                {
+                    if (!spawned)
+                    {
+                        sprite.setTexture(textures[4]);
+
+
+                        if (!restarted) {
+                            fourthscrolltimer.restart();
+                            restarted = true;
+                        }
+
+                        if (fourthscrolltimer.getElapsedTime().asSeconds() >= 3.0f)
+                            despawnScroll();
+
+                        enemy.sprite.setPosition(-600, 0);
+
+                    }
+
+                }
+            }
+        }
+        //Last 2 scrolls,dialogue between Chasqui and King,Ending,screen becomes black
+        void updatefifthscroll(const Player& player)
+        {
+            if (!spawned) {
+
+                if (player.getPosition().x >= 8850 && player.getPosition().x <= 8870)
+                {
+
+
+
+                    spawnFifthScroll();
+
+                    if (!restarted) {
+                        fourthscrolltimer.restart();
+                        restarted = true;
+                    }
+
+                    if (fourthscrolltimer.getElapsedTime().asSeconds() >= 5.0f) {
+                        spawnSixthScroll();
+
+                    }
+                    if (fourthscrolltimer.getElapsedTime().asSeconds() >= 10.0f)
+                        fadeIn = true;
+                }
+            }
+        }
+
+
+
+
+        // Again draw function
+        void draw(sf::RenderWindow& window) override
+        {
+            window.draw(sprite);
+
+        }
+    };
+
+
+void run() {
+    sf::RenderWindow window(sf::VideoMode(1280, 720), "Inca adventure"); // Game window
+    sf::RectangleShape fadeRect(sf::Vector2f(window.getSize().x, window.getSize().y)); // Black screen
     fadeRect.setFillColor(sf::Color::Black);
     fadeRect.setFillColor(sf::Color(0, 0, 0, 0));
     const sf::Time totalDuration = sf::seconds(13.0f);
     const sf::Time frameTime = sf::seconds(1.0f / 60.0f);
+    //^ For black screen to appear in the end
     sf::Clock clock;
-    
     sf::Font font;
     if (!font.loadFromFile("8bitlim.ttf"))
     {
         // Error handling if font loading fails
-        return -1;
+        throw runtime_error("Failed to load text: 8bitlim.ttf ");
     }
     window.setFramerateLimit(60);
-#ifdef _WIN32
+#ifdef _WIN32 // Full size of screen(not full screen) used windows.h library
     HWND hwnd = reinterpret_cast<HWND>(window.getSystemHandle());
     ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
- 
-   
+
+    // Last text(about authors)
     sf::Text text("Authors -\n"
         "David Barsegyan\n"
         "Giorgi Gogochishvili\n"
-        "Incas..Adventure", font, 34);
+        "Inca..Adventure", font, 34);
     text.setFillColor(sf::Color::White);
     text.setPosition(9000,
         500);
- 
+
     bool fadeIn = true;
-    
- 
+
+
     float playerMovementSpeed = 8.0f;
- 
+    // Paths to the game textures
     vector<string> texturePaths = {
         "chasqui-left.png",
         "chasqui.png",
@@ -781,7 +817,7 @@ int main()
         "general.png",
         "jariskac.png"
     };
- 
+
     vector<string> scrollTexturePaths = {
         "generaltext.png",
         "pumatext.png",
@@ -791,62 +827,59 @@ int main()
         "chasquitext.psd",
         "kingtext.psd"
     };
- 
+
     vector<string> enemyTexturePaths = {
        "puma.png",
        "robbert.png",
        "wizard.png"
-       
-       
+
+
     };
-   
+
     
-   
+    // Entities of the game
     Person General(texturePaths, sf::Vector2f(0, 506), 0.4f, 9);
-    
     Enemy enemy(enemyTexturePaths, sf::Vector2f(1800, 706), 0.8f, 0);
     Enemy enemy2(enemyTexturePaths, sf::Vector2f(4300, 590), 1.1f, 1);
     Enemy enemy3(enemyTexturePaths, sf::Vector2f(7000, 560), 0.5f, 2);
-    Player player(texturePaths, sf::Vector2f(200, 626), 0.4f, playerMovementSpeed, window,enemy,enemy2,enemy3);
-    
-    
+    Player player(texturePaths, sf::Vector2f(200, 626), 0.4f, playerMovementSpeed, window, enemy, enemy2, enemy3);
     Scroll firstScroll(scrollTexturePaths);
     Scroll secondScroll(scrollTexturePaths);
     Scroll thirdScroll(scrollTexturePaths);
     Scroll fourthScroll(scrollTexturePaths);
     Scroll lastScroll(scrollTexturePaths);
-    
-  
+
+    // Backgrounds
     sf::Texture backgroundTexture;
     if (!backgroundTexture.loadFromFile("background.psd"))
     {
-        
+
         throw runtime_error("Failed to load texture: background.psd");
     }
     sf::Sprite backgroundSprite;
     backgroundSprite.setTexture(backgroundTexture);
     backgroundSprite.setScale(1.0f, 1.0f);
     backgroundSprite.setPosition(0, 0);
- 
+
     sf::Sprite secondBackgroundSprite;
     secondBackgroundSprite.setTexture(backgroundTexture);
     secondBackgroundSprite.setScale(1.0f, 1.0f);
     secondBackgroundSprite.setPosition(backgroundSprite.getGlobalBounds().width, 0);
     sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
     view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
- 
+    // Another entities of the game
     sf::Vector2f kingPosition = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 400, 556);
     sf::Vector2f jariskaci1Position = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 235, 506);
     sf::Vector2f jariskaci2Position = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 700, 506);
     Person King(texturePaths, kingPosition, 0.4f, 8);
     Person jariskaci1(texturePaths, jariskaci1Position, 0.4f, 10);
     Person jariskaci2(texturePaths, jariskaci2Position, 0.4f, 10);
- 
+
     while (window.isOpen())
     {
-        
+
         sf::Event event;
-      
+        // Handle events
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
@@ -862,29 +895,30 @@ int main()
             else if (event.type == sf::Event::KeyReleased)
             {
                 if (firstScroll.gameStarted == true) {
-                 player.handleKeyRelease(event.key.code);
+                    player.handleKeyRelease(event.key.code);
                 }
             }
-           
+
         }
-        if(lastScroll.fadeIn==true){
-        sf::Clock clock;
+        // Black screen effect with text
+        if (lastScroll.fadeIn == true) {
+            sf::Clock clock;
             while (clock.getElapsedTime() < totalDuration)
             {
-                const sf::Time elapsed = clock.getElapsedTime();
-                const float alpha = elapsed / totalDuration;
-                const sf::Uint8 currentAlpha = static_cast<sf::Uint8>(alpha * 255);
- 
-                // Update the background color with the current alpha value
-                window.clear(sf::Color(0, 0, 0, currentAlpha));
+      
+
+                
+
+                // Update the background color 
+                window.clear(sf::Color(0, 0, 0, 255));
                 window.draw(text);
                 window.display();
- 
-                // Wait for the frame time interval
-            
+
+                
+
             }
         }
- 
+        // Updating and drawing
         player.update(secondBackgroundSprite, enemy, enemy2, enemy3);
         firstScroll.updatefirstscroll(player);
         secondScroll.updatesecondscroll(player);
@@ -893,9 +927,7 @@ int main()
         lastScroll.updatefifthscroll(player);
         view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
         window.setView(view);
- 
         window.clear(sf::Color(135, 206, 235));
- 
         window.draw(backgroundSprite);
         window.draw(secondBackgroundSprite);
         firstScroll.draw(window);
@@ -911,11 +943,20 @@ int main()
         enemy.draw(window);
         enemy2.draw(window);
         enemy3.draw(window);
- 
-       
- 
+
+
+        // Display
         window.display();
     }
- 
+
+}
+
+int main()
+{
+
+    run(); // Game run
+
+   
+
     return 0;
 }
