@@ -2,18 +2,15 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include <thread>
-
-#ifdef _WIN32
 #include <Windows.h>
-#endif
+
+
 using namespace std;
 // libraries and namespaces 
 
 class visualize // abstract class vizualize
 {  
 public:
-    sf::Sprite sprite;
     virtual void draw(sf::RenderWindow& window) = 0; 
     virtual sf::Vector2f getPosition() const = 0; 
 };
@@ -25,14 +22,50 @@ protected:
     sf::Vector2f position;         // Position of the person
     float scale;                   // Scale of the person
     size_t currentTextureIndex;    // Index of the current texture being displayed
-    size_t TextureIndex;           // Index of the default texture
+    size_t TextureIndex;    // Index of the default texture 
+    size_t IdleTextureIndex;
+    sf::Clock IdleTimer;
+
 
 public:
     sf::Sprite sprite;  // Sprite object for the person
 
-    
     Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
-        : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex),
+        : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), 
+        currentTextureIndex(0)
+    {
+        // Load textures from the provided paths
+        for (const auto& texturePath : texturePaths)
+        {
+            sf::Texture texture;
+            if (!texture.loadFromFile(texturePath))
+            {
+                // Error handling if loading fails for any of the textures
+                throw runtime_error("Failed to load texture: " + texturePath);
+            }
+            textures.push_back(texture);
+        }
+
+        // Check if texturePaths vector is empty
+        if (texturePaths.empty())
+        {
+            throw runtime_error("Texture paths vector is empty");
+        }
+
+        // Check if currentTextureIndex is out of range
+        if (texturePaths.size() <= currentTextureIndex)
+        {
+            throw runtime_error("Invalid current texture index");
+        }
+
+        // Set the texture and properties for the sprite
+        sprite.setTexture(textures[TextureIndex]);
+        sprite.setScale(scale, scale);
+        sprite.setPosition(position);
+    }
+
+    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex,size_t IdleTextureIndex)
+        : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), IdleTextureIndex(IdleTextureIndex),
         currentTextureIndex(0)
     {
         // Load textures from the provided paths
@@ -77,30 +110,31 @@ public:
         return sprite.getPosition();
     }
 
-    /*
+    void update() {
+        IdleAnimatePerson();
+    }
   
     void IdleAnimatePerson()
     {
         
-        if (idleTimer.getElapsedTime().asMilliseconds() >= 1000)
+        if (IdleTimer.getElapsedTime().asMilliseconds() >= 1000)
         {
             
-            if (currentTextureIndex == idleTextureIndex)
+            if (currentTextureIndex == IdleTextureIndex)
             {
                 currentTextureIndex = TextureIndex;
             }
             else
             {
-                currentTextureIndex = idleTextureIndex;
+                currentTextureIndex = IdleTextureIndex;
             }
 
            
             sprite.setTexture(textures[currentTextureIndex]);
-            idleTimer.restart();
+            IdleTimer.restart();
         }
     }
-    DIDNT REALISE IDLE ANIMATION FOR PERSON//lack of textures for idle animation
-    */
+    
 };
 
 class Enemy : public Person // derived class Enemy that inherits from the Person
@@ -228,6 +262,8 @@ public:
             }
         
     }
+
+    // Animate left
 
     void animateLeft() {
 
@@ -429,6 +465,7 @@ public:
                 quest3done = true;
                 scroll1Sprite.setPosition(-600, 0);
                 scroll2Sprite.setPosition(-600, 0);
+                enemy3.sprite.setPosition(-600, 0);
             }
 
             if (lookingRight == true && canMove == false)
@@ -541,16 +578,7 @@ public:
     }
 
     // Check if the player is moving left
-    bool isMovingLeft() const
-    {
-        return movingLeft;
-    }
-
-    // Check if the player is moving right
-    bool isMovingRight() const
-    {
-        return movingRight;
-    }
+ 
 
     //Current position of the player
     sf::Vector2f getPosition() const override
@@ -722,6 +750,7 @@ private:
         {
             spawned = true;
             sprite.setPosition(-600, 506);
+            
         }
 
         // Update functions for all scrolls
@@ -804,7 +833,7 @@ private:
                         if (fourthscrolltimer.getElapsedTime().asSeconds() >= 3.0f)
                             despawnScroll();
 
-                        enemy.sprite.setPosition(-600, 0);
+                        
 
                     }
 
@@ -838,9 +867,6 @@ private:
             }
         }
 
-
-
-
         // Again draw function
         void draw(sf::RenderWindow& window) override
         {
@@ -866,17 +892,15 @@ void run() {
         throw runtime_error("Failed to load text: 8bitlim.ttf ");
     }
     window.setFramerateLimit(60);
-#ifdef _WIN32 // Full size of screen(not full screen) used windows.h library
-    HWND hwnd = reinterpret_cast<HWND>(window.getSystemHandle());
-    ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
+    // Full size of screen(not full screen) used windows.h library
+    ShowWindow(window.getSystemHandle(), SW_SHOWMAXIMIZED); // https://github.com/SFML/SFML/issues/744
+
 
     // Last text(about authors)
     sf::Text text("Authors -\n"
         "David Barsegyan\n"
         "Giorgi Gogochishvili\n"
-        "Inca..Adventure"
-        "Github: https://github.com/GiorgiGogochishvili/Project2", font, 34);
+        "Inca..Adventure", font, 34);
     text.setFillColor(sf::Color::White);
     text.setPosition(9000,
         500);
@@ -885,7 +909,7 @@ void run() {
 
 
     float playerMovementSpeed = 8.0f;
-    // Paths to the game textures
+    // Paths to the game textures (container)
     vector<string> texturePaths = {
         "chasqui-left.png",
         "chasqui.png",
@@ -901,7 +925,9 @@ void run() {
         "death1.png",
         "death2.png",
         "death3.png",
-        "death4.png"
+        "death4.png",
+        "generalmv.psd",
+        "kingmv.png"
     };
 
     vector<string> scrollTexturePaths = {
@@ -924,7 +950,7 @@ void run() {
 
     
     // Entities of the game
-    Person General(texturePaths, sf::Vector2f(0, 506), 0.4f, 9);
+    Person General(texturePaths, sf::Vector2f(0, 506), 0.4f, 9,15);
     Enemy enemy(enemyTexturePaths, sf::Vector2f(1800, 706), 0.8f, 0);
     Enemy enemy2(enemyTexturePaths, sf::Vector2f(4300, 590), 1.1f, 1);
     Enemy enemy3(enemyTexturePaths, sf::Vector2f(7000, 560), 0.5f, 2);
@@ -951,16 +977,16 @@ void run() {
     secondBackgroundSprite.setTexture(backgroundTexture);
     secondBackgroundSprite.setScale(1.0f, 1.0f);
     secondBackgroundSprite.setPosition(backgroundSprite.getGlobalBounds().width, 0);
-    sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));
-    view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
+   
     // Another entities of the game
     sf::Vector2f kingPosition = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 400, 556);
     sf::Vector2f jariskaci1Position = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 235, 506);
     sf::Vector2f jariskaci2Position = sf::Vector2f(secondBackgroundSprite.getPosition().x + secondBackgroundSprite.getGlobalBounds().width - 700, 506);
-    Person King(texturePaths, kingPosition, 0.4f, 8);
+    Person King(texturePaths, kingPosition, 0.4f, 8,16);
     Person jariskaci1(texturePaths, jariskaci1Position, 0.4f, 10);
     Person jariskaci2(texturePaths, jariskaci2Position, 0.4f, 10);
-
+    sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));// view variable,specify rectangular area from (0,0) to max width/height of screen
+    view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
     while (window.isOpen())
     {
 
@@ -1003,6 +1029,7 @@ void run() {
                 
 
             }
+            window.close();
         }
         // Updating and drawing
         player.update(secondBackgroundSprite, enemy, enemy2, enemy3);
@@ -1011,7 +1038,9 @@ void run() {
         thirdScroll.updatethirdscroll(player);
         fourthScroll.updatefourthscroll(player, enemy3);
         lastScroll.updatefifthscroll(player);
-        view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
+        General.update();
+        King.update();
+        view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2); // update view
         window.setView(view);
         window.clear(sf::Color(135, 206, 235));
         window.draw(backgroundSprite);
