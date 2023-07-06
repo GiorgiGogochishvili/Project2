@@ -197,6 +197,8 @@ public:
     {
         currentTextureIndex = 0;
         sprite.setTexture(textures[currentTextureIndex]);
+        texturesetleft = true;
+        texturesetright = false;
     }
 
     // Set the texture for right movement
@@ -204,18 +206,78 @@ public:
     {
         currentTextureIndex = 1;
         sprite.setTexture(textures[currentTextureIndex]);
+        texturesetright = true;
+        texturesetleft = false;
     }
 
     // Animate right
-    void animateRight()
-    {
-        currentTextureIndex++;
-        if (currentTextureIndex >= textures.size() - 2)
+    
+
+    void animateRight() {
+        
+            if (animationTimer.getElapsedTime().asMilliseconds() >= 750 && animationTimer.getElapsedTime().asMilliseconds() <= 1500)
+            {
+                currentTextureIndex = 2;
+                sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if(animationTimer.getElapsedTime().asMilliseconds() >= 1501)
+            {
+                currentTextureIndex = 1;
+                sprite.setTexture(textures[currentTextureIndex]);
+                animationTimer.restart();
+            }
+        
+    }
+
+    void animateLeft() {
+
+        if (animationTimer.getElapsedTime().asMilliseconds() >= 750 && animationTimer.getElapsedTime().asMilliseconds() <= 1500)
         {
-            currentTextureIndex = 2;  // Skip the first two textures (chasqui.png and chasqui-left.png)
+            currentTextureIndex = 4;
+            sprite.setTexture(textures[currentTextureIndex]);
         }
-        sprite.setTexture(textures[currentTextureIndex]);
-        animationTimer.restart();
+        else if (animationTimer.getElapsedTime().asMilliseconds() >= 1501)
+        {
+            currentTextureIndex = 0;
+            sprite.setTexture(textures[currentTextureIndex]);
+            animationTimer.restart();
+        }
+
+    }
+   
+    void animateDeath() {
+        
+       
+            if (deathTimer.getElapsedTime().asMilliseconds() >= 300 && deathTimer.getElapsedTime().asMilliseconds() <= 799){
+            currentTextureIndex = 1;
+            sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if (deathTimer.getElapsedTime().asMilliseconds() >= 800 && deathTimer.getElapsedTime().asMilliseconds() <= 1299)
+            {
+                currentTextureIndex = 11;
+                sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if (deathTimer.getElapsedTime().asMilliseconds() >= 1300 && deathTimer.getElapsedTime().asMilliseconds() <= 1799)
+            {
+                currentTextureIndex = 12;
+                sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if (deathTimer.getElapsedTime().asMilliseconds() >= 1800 && deathTimer.getElapsedTime().asMilliseconds() <= 2699)
+            {
+                currentTextureIndex = 13;
+                sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if (deathTimer.getElapsedTime().asMilliseconds() >= 2700 && deathTimer.getElapsedTime().asMilliseconds() <= 5999)
+            {
+                currentTextureIndex = 14;
+                sprite.setTexture(textures[currentTextureIndex]);
+            }
+            else if (deathTimer.getElapsedTime().asMilliseconds() >= 6000)
+            {
+                window.close();
+            }
+        
+
     }
 
     // Drawing the player and objects
@@ -247,12 +309,14 @@ public:
         {
             movingLeft = true;
             movingRight = false;
+            if(texturesetleft == false)
             setTextureLeft();
         }
         else if (key == sf::Keyboard::Right)
         {
             movingLeft = false;
             movingRight = true;
+            if(texturesetright == false)
             setTextureRight();
         }
         else if (key == sf::Keyboard::Enter)
@@ -333,7 +397,10 @@ public:
 
             if (lookingRight == true && canMove == false)
             {
-                window.close();
+                deathTimer.restart();
+                death = true;
+                movingLeft = false;
+                movingRight = false;
             }
         }
         else if (quest2done == false)
@@ -348,7 +415,10 @@ public:
 
             if (lookingLeft == true && canMove == false)
             {
-                window.close();
+                deathTimer.restart();
+                death = true;
+                movingLeft = false;
+                movingRight = false;
             }
         }
         else if (quest3done == false)
@@ -363,7 +433,10 @@ public:
 
             if (lookingRight == true && canMove == false)
             {
-                window.close();
+                deathTimer.restart();
+                death = true;
+                movingLeft = false;
+                movingRight = false;
             }
         }
     }
@@ -408,19 +481,24 @@ public:
                 if (sprite.getPosition().x > 200)
                 {
                     sprite.move(-movementSpeed, 0);
+                    animateLeft();
                 }
             }
             else if (movingRight)
             {
                 sprite.move(movementSpeed, 0);
-                if (animationTimer.getElapsedTime().asMilliseconds() >= 500)
-                {
-                    animateRight();
-                }
+                animateRight();
+                
             }
             else
             {
                 IdleAnimate();
+            }
+        }
+
+        if (canMove == false) {
+            if (death == true) {
+                animateDeath();
             }
         }
     }
@@ -490,7 +568,8 @@ public:
     bool canMove = true;
     bool lookingLeft = false;
     bool lookingRight = false;
-
+    bool texturesetleft = true;
+    bool texturesetright = false;
 private:
     //Nain variables
     float movementSpeed;
@@ -504,6 +583,8 @@ private:
     int idleRightTextureIndex;
     int idleLeftTextureIndex;
     int idleIndex;
+    sf::Clock deathTimer;
+    bool death = false;
     sf::RenderWindow& window;
     Enemy& enemy;
     Enemy& enemy2;
@@ -794,7 +875,8 @@ void run() {
     sf::Text text("Authors -\n"
         "David Barsegyan\n"
         "Giorgi Gogochishvili\n"
-        "Inca..Adventure", font, 34);
+        "Inca..Adventure"
+        "Github: https://github.com/GiorgiGogochishvili/Project2", font, 34);
     text.setFillColor(sf::Color::White);
     text.setPosition(9000,
         500);
@@ -807,15 +889,19 @@ void run() {
     vector<string> texturePaths = {
         "chasqui-left.png",
         "chasqui.png",
-        "rightmv1.png",
+        "rightmv4.png",
         "rightmv2.png",
-        "rightmv3.png",
+        "leftmv1.png",
         "idlechasquiright.png",
         "idlechasquileft.png",
         "background.psd",
         "king.png",
         "general.png",
-        "jariskac.png"
+        "jariskac.png",
+        "death1.png",
+        "death2.png",
+        "death3.png",
+        "death4.png"
     };
 
     vector<string> scrollTexturePaths = {
@@ -960,3 +1046,5 @@ int main()
 
     return 0;
 }
+
+
