@@ -21,16 +21,16 @@ protected:
     vector<sf::Texture> textures;  // Vector of loaded textures
     sf::Vector2f position;         // Position of the person
     float scale;                   // Scale of the person
-    size_t currentTextureIndex;    // Index of the current texture being displayed
-    size_t TextureIndex;    // Index of the default texture 
-    size_t IdleTextureIndex;
+    int currentTextureIndex;    // Index of the current texture being displayed
+    int TextureIndex;    // Index of the default texture 
+    int IdleTextureIndex;
     sf::Clock IdleTimer;
 
 
 public:
     sf::Sprite sprite;  // Sprite object for the person
 
-    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex) // non-animated
+    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, int TextureIndex) // non-animated
         : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), 
         currentTextureIndex(0)
     {
@@ -64,7 +64,7 @@ public:
         sprite.setPosition(position);
     }
 
-    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex,size_t IdleTextureIndex) // animated
+    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, int TextureIndex,int IdleTextureIndex) // animated
         : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), IdleTextureIndex(IdleTextureIndex),
         currentTextureIndex(0)
     {
@@ -141,7 +141,7 @@ public:
 class Enemy : public Person // derived class Enemy that inherits from the Person
 {
 public:
-    Enemy(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
+    Enemy(vector<string>& texturePaths, const sf::Vector2f& position, float scale, int TextureIndex)
         : Person(texturePaths, position, scale, TextureIndex)
     {
 
@@ -600,14 +600,14 @@ private:
     float movementSpeed;
     bool movingLeft;
     bool movingRight;
-    size_t currentTextureIndex;
+    int currentTextureIndex;
     vector<sf::Texture> textures;
     sf::Sprite sprite;
     sf::Clock animationTimer;
     sf::Clock idleTimer;
-    size_t idleRightTextureIndex;
-    size_t idleLeftTextureIndex;
-    size_t idleIndex;
+    int idleRightTextureIndex;
+    int idleLeftTextureIndex;
+    int idleIndex;
     sf::Clock deathTimer;
     bool death = false;
     sf::RenderWindow& window;
