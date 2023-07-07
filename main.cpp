@@ -10,7 +10,7 @@ using namespace std;
 
 class visualize // abstract class vizualize
 {  
-public:
+protected:
     virtual void draw(sf::RenderWindow& window) = 0; 
     virtual sf::Vector2f getPosition() const = 0; 
 };
@@ -221,11 +221,7 @@ public:
         scroll2Sprite.setScale(0.2f, 0.5f);
     }
 
-    // Move the player
-    void move(float x, float y)
-    {
-        sprite.move(x, y);
-    }
+   
 
     // Set the texture for left movement
     void setTextureLeft()
@@ -663,8 +659,7 @@ private:
         {
             return sprite.getPosition();
         }
-        float fadeInDuration = 2.0f;
-        float fadeAlpha = 0.0f;
+  
 
 
     public:
