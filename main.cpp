@@ -30,7 +30,7 @@ protected:
 public:
     sf::Sprite sprite;  // Sprite object for the person
 
-    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex)
+    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex) // non-animated
         : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), 
         currentTextureIndex(0)
     {
@@ -64,7 +64,7 @@ public:
         sprite.setPosition(position);
     }
 
-    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex,size_t IdleTextureIndex)
+    Person(vector<string>& texturePaths, const sf::Vector2f& position, float scale, size_t TextureIndex,size_t IdleTextureIndex) // animated
         : texturePaths(texturePaths), position(position), scale(scale), TextureIndex(TextureIndex), IdleTextureIndex(IdleTextureIndex),
         currentTextureIndex(0)
     {
@@ -110,7 +110,8 @@ public:
         return sprite.getPosition();
     }
 
-    void update() {
+    void update() // Update for King and General // animates
+    {
         IdleAnimatePerson();
     }
   
@@ -577,7 +578,7 @@ public:
         }
     }
 
-    // Check if the player is moving left
+   
  
 
     //Current position of the player
@@ -603,14 +604,14 @@ private:
     float movementSpeed;
     bool movingLeft;
     bool movingRight;
-    int currentTextureIndex;
+    size_t currentTextureIndex;
     vector<sf::Texture> textures;
     sf::Sprite sprite;
     sf::Clock animationTimer;
     sf::Clock idleTimer;
-    int idleRightTextureIndex;
-    int idleLeftTextureIndex;
-    int idleIndex;
+    size_t idleRightTextureIndex;
+    size_t idleLeftTextureIndex;
+    size_t idleIndex;
     sf::Clock deathTimer;
     bool death = false;
     sf::RenderWindow& window;
@@ -879,12 +880,9 @@ private:
 void run() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Inca adventure"); // Game window
     sf::RectangleShape fadeRect(sf::Vector2f(window.getSize().x, window.getSize().y)); // Black screen
-    fadeRect.setFillColor(sf::Color::Black);
-    fadeRect.setFillColor(sf::Color(0, 0, 0, 0));
-    const sf::Time totalDuration = sf::seconds(13.0f);
-    const sf::Time frameTime = sf::seconds(1.0f / 60.0f);
+    sf::Time totalDuration = sf::seconds(13.0f);
     //^ For black screen to appear in the end
-    sf::Clock clock;
+   
     sf::Font font;
     if (!font.loadFromFile("8bitlim.ttf"))
     {
@@ -985,8 +983,7 @@ void run() {
     Person King(texturePaths, kingPosition, 0.4f, 8,16);
     Person jariskaci1(texturePaths, jariskaci1Position, 0.4f, 10);
     Person jariskaci2(texturePaths, jariskaci2Position, 0.4f, 10);
-    sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));// view variable,specify rectangular area from (0,0) to max width/height of screen
-    view.setCenter(player.getPosition().x + window.getSize().x / 4, window.getSize().y / 2);
+    sf::View view(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y));// view,specify rectangular area from (0,0) to max width/height of screen
     while (window.isOpen())
     {
 
